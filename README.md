@@ -5,8 +5,6 @@
 > Learn what *normal* looks like, then catch a failure while it's still forming —
 > seconds before a threshold alarm would ever fire — and let the system heal itself.
 
-<sub>BCSE355L · Fall 2026–2027 · Shreya Shirsh (24BIT0380) & Kartikey Chauhan (24BIT0386)</sub>
-
 ---
 
 ## The idea
@@ -125,13 +123,9 @@ Component-level run instructions land in each folder's README as the phases are 
 
 ## Team
 
-| | Focus |
-|---|---|
-| **Shreya Shirsh** (24BIT0380) | — |
-| **Kartikey Chauhan** (24BIT0386) | — |
+| **Team** |
+|---|
+| **Shreya Shirsh**  |
+| **Kartikey Chauhan**  |
 
-Both members maintain end-to-end understanding of the system.
 
-## License
-
-Academic project — coursework for BCSE355L. License TBD before public release.
