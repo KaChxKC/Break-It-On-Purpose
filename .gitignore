@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.python-version
+
+# Data & artifacts (large / regenerated)
+*.log
+*.sqlite
+*.db
+data/raw/
+data/tmp/
+models/*.pkl
+models/*.joblib
+
+# AWS / secrets — NEVER commit credentials
+.env
+*.pem
+*.key
+aws_credentials*
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
