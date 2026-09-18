@@ -19,6 +19,7 @@ class Database:
             max_overflow=max_overflow,
             pool_timeout=5,        # fail fast when the pool is exhausted
             pool_pre_ping=True,    # transparently discard connections dropped by an RDS reboot
+            connect_args={"connect_timeout": 5},  # fail fast when the DB host is unreachable
             future=True,
         )
 
