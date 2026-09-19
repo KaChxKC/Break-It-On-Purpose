@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Break It On Purpose — Status</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #0f1720; color: #e6edf3; }
+    header { padding: 20px 24px; border-bottom: 1px solid #22303c; }
+    h1 { margin: 0 0 4px; font-size: 18px; }
+    .instance { color: #7ee787; font-weight: 600; }
+    main { padding: 24px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); max-width: 900px; }
+    .card { background: #161f2b; border: 1px solid #22303c; border-radius: 10px; padding: 16px; }
+    .card .label { color: #8b97a4; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    .card .value { font-size: 26px; font-weight: 700; margin-top: 6px; }
+    .card .unit { font-size: 13px; color: #8b97a4; font-weight: 400; }
+    .controls { padding: 0 24px 24px; max-width: 900px; }
+    button { background: #238636; color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+    button:hover { background: #2ea043; }
+    .stale { opacity: .45; }
+    .foot { padding: 0 24px 24px; color: #8b97a4; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Break It On Purpose — live status</h1>
+    <div>served by instance <span class="instance">{{ instance }}</span></div>
+  </header>
+
+  <main id="cards">
+    <div class="card"><div class="label">Latency p50</div><div class="value" id="p50">–<span class="unit"> ms</span></div></div>
+    <div class="card"><div class="label">Latency p95</div><div class="value" id="p95">–<span class="unit"> ms</span></div></div>
+    <div class="card"><div class="label">Latency p99</div><div class="value" id="p99">–<span class="unit"> ms</span></div></div>
+    <div class="card"><div class="label">In-flight</div><div class="value" id="inflight">–</div></div>
+    <div class="card"><div class="label">Error rate</div><div class="value" id="errrate">–<span class="unit"> %</span></div></div>
+    <div class="card"><div class="label">Requests</div><div class="value" id="reqs">–</div></div>
+    <div class="card"><div class="label">Pool in use</div><div class="value" id="pool">–<span class="unit"> %</span></div></div>
+  </main>
+
+  <div class="controls">
+    <button onclick="fetch('/load?cpu_ms=50&queries=1').then(refresh)">Send test load</button>
+  </div>
+
+  <div class="foot">Auto-refreshes every second. Metric agent (Phase 2) scrapes the same <code>/metrics</code> endpoint.</div>
+
+  <script>
+    function set(id, v) { document.getElementById(id).firstChild.textContent = v; }
+    async function refresh() {
+      try {
+        const m = await (await fetch('/metrics')).json();
+        set('p50', m.latency_ms.p50);
+        set('p95', m.latency_ms.p95);
+        set('p99', m.latency_ms.p99);
+        set('inflight', m.in_flight);
+        set('errrate', (m.error_rate * 100).toFixed(1));
+        set('reqs', m.requests_total);
+        set('pool', (m.pool.utilization * 100).toFixed(0));
+        document.getElementById('cards').classList.remove('stale');
+      } catch (e) {
+        document.getElementById('cards').classList.add('stale');
+      }
+    }
+    refresh();
+    setInterval(refresh, 1000);
+  </script>
+</body>
+</html>
