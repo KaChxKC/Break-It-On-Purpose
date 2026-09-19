@@ -112,8 +112,8 @@ Component-level run instructions land in each folder's README as the phases are 
 ## Roadmap
 
 - [x] **Phase 0** — Foundations, safety rails, repo setup
-- [ ] **Phase 1** — Flask app with observability baked in *(local)*
-- [ ] **Phase 2** — Metric agent + trend feature pipeline *(local)*
+- [x] **Phase 1** — Flask app with observability baked in *(local)*
+- [x] **Phase 2** — Metric agent + trend feature pipeline *(local)*
 - [ ] **Phase 3** — Isolation Forest trained & validated *(local)*
 - [ ] **Phase 4** — Stand up real AWS infra, scripted
 - [ ] **Phase 5** — Chaos experiments & data collection
