@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: biop-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-biop}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-biop_local_pw}
