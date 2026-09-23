@@ -29,6 +29,9 @@ class InfraConfig:
     db_allocated_storage: int = 20
     db_multi_az: bool = False
 
+    # Nightly auto-stop backstop (UTC). 20:00 UTC = 01:30 IST.
+    autostop_cron: str = "cron(0 20 * * ? *)"
+
     @property
     def tags(self) -> dict:
         return {"Project": self.project, "ManagedBy": f"{self.project}-infra"}
