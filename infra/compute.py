@@ -107,9 +107,12 @@ def ensure_launch_template(aws: Aws, ec2_sg_id: str, instance_profile: str,
     }
     name = cfg.name("lt")
     if _find_launch_template(ec2, name):
-        # Roll a new default version rather than mutating in place.
-        ec2.create_launch_template_version(LaunchTemplateName=name, LaunchTemplateData=template_data)
-        ec2.modify_launch_template(LaunchTemplateName=name, DefaultVersion="$Latest")
+        # Roll a new default version rather than mutating in place. DefaultVersion
+        # must be a concrete number ($Latest is not accepted here).
+        version = ec2.create_launch_template_version(
+            LaunchTemplateName=name, LaunchTemplateData=template_data
+        )["LaunchTemplateVersion"]["VersionNumber"]
+        ec2.modify_launch_template(LaunchTemplateName=name, DefaultVersion=str(version))
         return _find_launch_template(ec2, name)
 
     return ec2.create_launch_template(
