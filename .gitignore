@@ -15,6 +15,7 @@ data/raw/
 data/tmp/
 models/*.pkl
 models/*.joblib
+analysis/figures/
 
 # AWS / secrets — NEVER commit credentials
 .env
