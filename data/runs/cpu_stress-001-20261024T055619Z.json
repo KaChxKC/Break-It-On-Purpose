@@ -1,0 +1,25 @@
+{
+  "run_id": "cpu_stress-001-20261024T055619Z",
+  "schema_version": "1.0.0",
+  "fault": "cpu_stress",
+  "fault_onset_epoch": 1792821410.9935741,
+  "fault_offset_epoch": 1792821470.9935741,
+  "fault_detail": {
+    "command_id": "6ac753d6-c433-4f28-8c3a-52a8c507ffe9",
+    "instance_ids": [
+      "i-00cbbf47792c201ca",
+      "i-03e97a1ef3369aa11"
+    ],
+    "duration_s": 60
+  },
+  "run_started_epoch": 1792821379.6011696,
+  "run_ended_epoch": 1792821472.263859,
+  "alb_dns": "biop-alb-2072255432.ap-south-1.elb.amazonaws.com",
+  "config": {
+    "steady_s": 30.0,
+    "observe_s": 60.0,
+    "load_qps": 50,
+    "load_duration_s": 150.0,
+    "out_dir": "data/runs"
+  }
+}

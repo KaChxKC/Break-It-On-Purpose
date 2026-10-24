@@ -1,0 +1,18 @@
+{
+  "run_id": "db_reboot-000-20261024T061724Z",
+  "schema_version": "1.0.0",
+  "fault": "db_reboot",
+  "fault_onset_epoch": 1792822674.093686,
+  "fault_offset_epoch": null,
+  "fault_detail": {},
+  "run_started_epoch": 1792822644.0823011,
+  "run_ended_epoch": 1792822734.868126,
+  "alb_dns": "biop-alb-2072255432.ap-south-1.elb.amazonaws.com",
+  "config": {
+    "steady_s": 30.0,
+    "observe_s": 60.0,
+    "load_qps": 50,
+    "load_duration_s": 150.0,
+    "out_dir": "data/runs"
+  }
+}

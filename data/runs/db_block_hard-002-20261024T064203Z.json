@@ -1,0 +1,25 @@
+{
+  "run_id": "db_block_hard-002-20261024T064203Z",
+  "schema_version": "1.0.0",
+  "fault": "db_block_hard",
+  "fault_onset_epoch": 1792824161.8969786,
+  "fault_offset_epoch": 1792824204.502081,
+  "fault_detail": {
+    "duration_s": 45,
+    "rules_restored": 1,
+    "revoke_epoch": 1792824158.9498527,
+    "terminate_epoch": 1792824161.8969786,
+    "backends_terminated": 4,
+    "killer_instance": "i-03e97a1ef3369aa11"
+  },
+  "run_started_epoch": 1792824123.3186567,
+  "run_ended_epoch": 1792824264.568197,
+  "alb_dns": "biop-alb-2072255432.ap-south-1.elb.amazonaws.com",
+  "config": {
+    "steady_s": 30.0,
+    "observe_s": 60.0,
+    "load_qps": 50,
+    "load_duration_s": 150.0,
+    "out_dir": "data/runs"
+  }
+}
