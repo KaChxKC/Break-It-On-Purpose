@@ -26,7 +26,7 @@ def ensure_asg(aws: Aws, launch_template_name: str, tg_arn: str,
         VPCZoneIdentifier=",".join(subnet_ids),
         TargetGroupARNs=[tg_arn],
         HealthCheckType="ELB",
-        HealthCheckGracePeriod=120,
+        HealthCheckGracePeriod=600,
         Tags=[{"Key": k, "Value": v, "PropagateAtLaunch": True}
               for k, v in {**cfg.tags, "Name": cfg.name("app")}.items()],
     )

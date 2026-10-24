@@ -11,14 +11,14 @@ AL2023_AMI_PARAM = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-defau
 # Placeholders use __NAME__ so they can't collide with bash's own ${...}/{} syntax.
 _USER_DATA = r"""#!/bin/bash
 set -euxo pipefail
-dnf install -y git python3.11 python3.11-pip stress-ng
+dnf install -y git python3.12 python3.12-pip stress-ng
 
 TOKEN=$(curl -sX PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 300")
 IID=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
 
 git clone __REPO__ /opt/app || (cd /opt/app && git pull)
 cd /opt/app
-python3.11 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/pip install -U pip
 .venv/bin/pip install -r requirements.txt gunicorn
 
