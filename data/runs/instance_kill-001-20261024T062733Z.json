@@ -1,0 +1,20 @@
+{
+  "run_id": "instance_kill-001-20261024T062733Z",
+  "schema_version": "1.0.0",
+  "fault": "instance_kill",
+  "fault_onset_epoch": 1792823299.1329722,
+  "fault_offset_epoch": null,
+  "fault_detail": {
+    "instance_id": "i-00cbbf47792c201ca"
+  },
+  "run_started_epoch": 1792823253.7028039,
+  "run_ended_epoch": 1792823360.0867639,
+  "alb_dns": "biop-alb-2072255432.ap-south-1.elb.amazonaws.com",
+  "config": {
+    "steady_s": 30.0,
+    "observe_s": 60.0,
+    "load_qps": 50,
+    "load_duration_s": 150.0,
+    "out_dir": "data/runs"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "run_id": "db_sg_block-002-20261024T060909Z",
+  "schema_version": "1.0.0",
+  "fault": "db_sg_block",
+  "fault_onset_epoch": 1792822181.2394154,
+  "fault_offset_epoch": 1792822226.7894285,
+  "fault_detail": {
+    "duration_s": 45,
+    "rules_restored": 1
+  },
+  "run_started_epoch": 1792822149.7140925,
+  "run_ended_epoch": 1792822286.7927566,
+  "alb_dns": "biop-alb-2072255432.ap-south-1.elb.amazonaws.com",
+  "config": {
+    "steady_s": 30.0,
+    "observe_s": 60.0,
+    "load_qps": 50,
+    "load_duration_s": 150.0,
+    "out_dir": "data/runs"
+  }
+}
