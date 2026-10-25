@@ -1,0 +1,17 @@
+{
+  "run_id": "ramp_cpu-007-20261025T103751Z",
+  "fault": "ramp_cpu",
+  "fault_onset_epoch": 1792924671.0877788,
+  "fault_detail": {
+    "ramp_qps": [
+      10,
+      250
+    ],
+    "path": "/load?cpu_ms=45&queries=1",
+    "load_ok": 8419,
+    "load_err": 9
+  },
+  "run_started_epoch": 1792924671.0877788,
+  "run_ended_epoch": 1792924795.0978587,
+  "alb_dns": "biop-alb-565292764.ap-south-1.elb.amazonaws.com"
+}

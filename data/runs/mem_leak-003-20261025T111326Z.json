@@ -1,0 +1,13 @@
+{
+  "run_id": "mem_leak-003-20261025T111326Z",
+  "fault": "mem_leak",
+  "fault_onset_epoch": 1792926806.5144336,
+  "fault_detail": {
+    "mb_per_step": 150,
+    "interval_s": 8,
+    "steps": 15
+  },
+  "run_started_epoch": 1792926806.5144336,
+  "run_ended_epoch": 1792926932.7708302,
+  "alb_dns": "biop-alb-565292764.ap-south-1.elb.amazonaws.com"
+}

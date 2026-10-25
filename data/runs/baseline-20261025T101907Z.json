@@ -1,0 +1,10 @@
+{
+  "run_id": "baseline-20261025T101907Z",
+  "fault": "none",
+  "fault_onset_epoch": null,
+  "run_started_epoch": 1792922947.565717,
+  "run_ended_epoch": 1792923547.6846716,
+  "alb_dns": "biop-alb-565292764.ap-south-1.elb.amazonaws.com",
+  "load_ok": 29586,
+  "load_err": 1
+}

@@ -1,0 +1,17 @@
+{
+  "run_id": "pool_fill-006-20261025T105729Z",
+  "fault": "pool_fill",
+  "fault_onset_epoch": 1792925849.8687284,
+  "fault_detail": {
+    "ramp_qps": [
+      5,
+      120
+    ],
+    "path": "/load?query_sleep_ms=300&queries=1",
+    "load_ok": 5089,
+    "load_err": 0
+  },
+  "run_started_epoch": 1792925849.8687284,
+  "run_ended_epoch": 1792925973.875944,
+  "alb_dns": "biop-alb-565292764.ap-south-1.elb.amazonaws.com"
+}
