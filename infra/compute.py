@@ -38,7 +38,7 @@ After=network-online.target
 [Service]
 WorkingDirectory=/opt/app
 EnvironmentFile=/opt/app/.env
-ExecStart=/opt/app/.venv/bin/gunicorn -w 2 -b 0.0.0.0:__APP_PORT__ run:app
+ExecStart=/opt/app/.venv/bin/gunicorn -w 1 --threads 8 -k gthread -b 0.0.0.0:__APP_PORT__ run:app
 Restart=always
 [Install]
 WantedBy=multi-user.target

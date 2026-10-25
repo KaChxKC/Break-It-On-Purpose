@@ -37,7 +37,7 @@ def test_render_user_data_substitutes():
     ud = render_user_data(CFG, "biop-db.abc123.ap-south-1.rds.amazonaws.com")
     assert "__DB_ENDPOINT__" not in ud and "__APP_PORT__" not in ud
     assert "biop-db.abc123.ap-south-1.rds.amazonaws.com" in ud
-    assert "gunicorn -w 2 -b 0.0.0.0:8000 run:app" in ud
+    assert "gunicorn -w 1 --threads 8 -k gthread -b 0.0.0.0:8000 run:app" in ud
     assert "agent.run_agent" in ud            # agent auto-starts
     assert "ssm get-parameter" in ud          # DB password pulled from SSM, not baked in
 
