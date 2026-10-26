@@ -48,6 +48,12 @@ class MetricsRegistry:
             if is_error:
                 self._errors_total += 1
 
+    def reset_latency(self) -> None:
+        """Forget recent latencies only. The request/error counters are left
+        alone: they are monotonic, and consumers derive rates from their deltas."""
+        with self._lock:
+            self._latencies.clear()
+
     def snapshot(self) -> dict:
         with self._lock:
             latencies = sorted(self._latencies)

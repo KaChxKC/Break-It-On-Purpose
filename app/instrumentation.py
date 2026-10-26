@@ -5,7 +5,7 @@ from flask import g, request
 # Administrative endpoints are excluded from workload metrics so that frequent
 # ALB health checks and metric scrapes don't drown out the real request
 # latency/throughput signal the model depends on.
-EXCLUDED_PATHS = {"/health", "/metrics"}
+EXCLUDED_PATHS = {"/health", "/metrics", "/metrics/reset-window"}
 
 
 def register_instrumentation(app, registry) -> None:
