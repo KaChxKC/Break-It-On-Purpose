@@ -3,66 +3,797 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Break It On Purpose — Status</title>
-  <style>
-    :root { color-scheme: light dark; }
-    body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: #0f1720; color: #e6edf3; }
-    header { padding: 20px 24px; border-bottom: 1px solid #22303c; }
-    h1 { margin: 0 0 4px; font-size: 18px; }
-    .instance { color: #7ee787; font-weight: 600; }
-    main { padding: 24px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); max-width: 900px; }
-    .card { background: #161f2b; border: 1px solid #22303c; border-radius: 10px; padding: 16px; }
-    .card .label { color: #8b97a4; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-    .card .value { font-size: 26px; font-weight: 700; margin-top: 6px; }
-    .card .unit { font-size: 13px; color: #8b97a4; font-weight: 400; }
-    .controls { padding: 0 24px 24px; max-width: 900px; }
-    button { background: #238636; color: #fff; border: 0; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
-    button:hover { background: #2ea043; }
-    .stale { opacity: .45; }
-    .foot { padding: 0 24px 24px; color: #8b97a4; font-size: 12px; }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Break It On Purpose — live status</h1>
-    <div>served by instance <span class="instance">{{ instance }}</span></div>
-  </header>
-
-  <main id="cards">
-    <div class="card"><div class="label">Latency p50</div><div class="value" id="p50">–<span class="unit"> ms</span></div></div>
-    <div class="card"><div class="label">Latency p95</div><div class="value" id="p95">–<span class="unit"> ms</span></div></div>
-    <div class="card"><div class="label">Latency p99</div><div class="value" id="p99">–<span class="unit"> ms</span></div></div>
-    <div class="card"><div class="label">In-flight</div><div class="value" id="inflight">–</div></div>
-    <div class="card"><div class="label">Error rate</div><div class="value" id="errrate">–<span class="unit"> %</span></div></div>
-    <div class="card"><div class="label">Requests</div><div class="value" id="reqs">–</div></div>
-    <div class="card"><div class="label">Pool in use</div><div class="value" id="pool">–<span class="unit"> %</span></div></div>
-  </main>
-
-  <div class="controls">
-    <button onclick="fetch('/load?cpu_ms=50&queries=1').then(refresh)">Send test load</button>
-  </div>
-
-  <div class="foot">Auto-refreshes every second. Metric agent (Phase 2) scrapes the same <code>/metrics</code> endpoint.</div>
-
+  <title>Break It On Purpose — Live Dashboard</title>
+  {% raw %}
   <script>
-    function set(id, v) { document.getElementById(id).firstChild.textContent = v; }
-    async function refresh() {
-      try {
-        const m = await (await fetch('/metrics')).json();
-        set('p50', m.latency_ms.p50);
-        set('p95', m.latency_ms.p95);
-        set('p99', m.latency_ms.p99);
-        set('inflight', m.in_flight);
-        set('errrate', (m.error_rate * 100).toFixed(1));
-        set('reqs', m.requests_total);
-        set('pool', (m.pool.utilization * 100).toFixed(0));
-        document.getElementById('cards').classList.remove('stale');
-      } catch (e) {
-        document.getElementById('cards').classList.add('stale');
+    // Apply a saved theme before first paint so there is no flash.
+    try { var t = localStorage.getItem('biop-theme'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --page: #f9f9f7;  --surface: #fcfcfb;
+      --ink: #0b0b0b;   --ink2: #52514e;  --muted: #898781;
+      --grid: #e1e0d9;  --axis: #c3c2b7;
+      --border: rgba(11, 11, 11, .10);  --wash: rgba(11, 11, 11, .05);
+      --s1: #2a78d6;  --s2: #eb6834;  --s3: #1baf7a;
+      --good: #0ca30c;  --warning: #fab219;  --critical: #d03b3b;  --neutral: #898781;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:where(:not([data-theme="light"])) {
+        color-scheme: dark;
+        --page: #0d0d0d;  --surface: #1a1a19;
+        --ink: #f0efec;   --ink2: #c3c2b7;
+        --grid: #2c2c2a;  --axis: #383835;
+        --border: rgba(255, 255, 255, .10);  --wash: rgba(255, 255, 255, .06);
+        --s1: #3987e5;  --s2: #d95926;  --s3: #199e70;
       }
     }
-    refresh();
-    setInterval(refresh, 1000);
-  </script>
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --page: #0d0d0d;  --surface: #1a1a19;
+      --ink: #f0efec;   --ink2: #c3c2b7;
+      --grid: #2c2c2a;  --axis: #383835;
+      --border: rgba(255, 255, 255, .10);  --wash: rgba(255, 255, 255, .06);
+      --s1: #3987e5;  --s2: #d95926;  --s3: #199e70;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--ink);
+           font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    button { font: inherit; color: inherit; cursor: pointer; }
+    .wrap { max-width: 1500px; margin: 0 auto; padding: 20px 28px 44px; }
+
+    /* header */
+    header { display: flex; align-items: center; justify-content: space-between;
+             gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+    h1 { font-size: 22px; margin: 0; letter-spacing: -.01em; }
+    .tag { color: var(--ink2); font-size: 13px; }
+    .pills { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .pill { display: inline-flex; align-items: center; gap: 8px; background: var(--surface);
+            border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+            font-size: 13px; color: var(--ink2); }
+    .pill b { color: var(--ink); font-weight: 600; word-break: break-all; }
+    button.pill:hover { border-color: var(--axis); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--neutral); flex: none; }
+    .dot.ok { background: var(--good); }
+    .dot.bad { background: var(--critical); }
+
+    /* status banner */
+    .banner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+              background: var(--surface); border: 1px solid var(--border);
+              border-left: 6px solid var(--neutral); border-radius: 12px;
+              padding: 16px 20px; margin-bottom: 16px; }
+    .banner[data-state="healthy"] { border-left-color: var(--good); }
+    .banner[data-state="warning"] { border-left-color: var(--warning); }
+    .banner[data-state="degraded"], .banner[data-state="down"] { border-left-color: var(--critical); }
+    .banner-icon { width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+                   border-radius: 50%; background: var(--wash); color: var(--neutral); }
+    .banner-icon svg { width: 24px; height: 24px; }
+    .banner[data-state="healthy"] .banner-icon { color: var(--good); }
+    .banner[data-state="warning"] .banner-icon { color: var(--warning); }
+    .banner[data-state="degraded"] .banner-icon, .banner[data-state="down"] .banner-icon { color: var(--critical); }
+    .banner-text { flex: 1; min-width: 260px; }
+    .banner-title { font-size: 24px; font-weight: 650; letter-spacing: -.01em; }
+    .banner-sub { color: var(--ink2); }
+    .limits { display: flex; align-items: center; gap: 12px; color: var(--ink2); font-size: 13px; flex-wrap: wrap; }
+    .limits input { width: 62px; font: inherit; color: var(--ink); background: var(--page);
+                    border: 1px solid var(--border); border-radius: 6px; padding: 3px 6px; }
+
+    .panel { background: var(--surface); border: 1px solid var(--border);
+             border-radius: 12px; padding: 16px 18px; }
+    .panel h2 { font-size: 14px; margin: 0 0 2px; font-weight: 650; }
+    .sub { color: var(--ink2); font-size: 13px; margin: 0 0 12px; }
+
+    /* scenarios */
+    .scn { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+    .scn .card { text-align: left; background: var(--page); border: 1px solid var(--border);
+                 border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
+    .scn .card:hover { border-color: var(--axis); }
+    .scn .card[aria-pressed="true"] { border-color: var(--s1); box-shadow: inset 0 0 0 2px var(--s1); }
+    .scn .t { font-weight: 650; }
+    .scn .d { color: var(--ink2); font-size: 13px; }
+    .runbar { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap;
+              color: var(--ink2); font-size: 13px; }
+    .runbar select, .btn { font: inherit; color: var(--ink); background: var(--page);
+                           border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .btn:not(:disabled):hover { border-color: var(--axis); }
+    .progress { flex: 1; min-width: 160px; height: 6px; border-radius: 3px; background: var(--wash); overflow: hidden; }
+    .progress i { display: block; height: 100%; width: 0; background: var(--s1); }
+
+    /* KPI tiles */
+    .kpis { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+    .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .kpi.hero { grid-column: span 2; }
+    .kpi .label { color: var(--ink2); font-size: 13px; }
+    .kpi .value { font-size: 32px; font-weight: 650; letter-spacing: -.02em; margin-top: 2px; line-height: 1.15; }
+    .kpi.hero .value { font-size: 56px; line-height: 1.05; }
+    .kpi .unit { font-size: 15px; color: var(--ink2); font-weight: 500; margin-left: 4px; letter-spacing: 0; }
+    .kpi .hint { color: var(--ink2); font-size: 12.5px; margin-top: 4px; }
+    .kpi.dim .value { opacity: .4; }
+
+    /* charts */
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; }
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink2); margin: 0 0 4px; }
+    .legend .key { display: inline-block; width: 16px; border-top: 2px solid; border-radius: 2px;
+                   vertical-align: middle; margin-right: 6px; }
+    .canvas-wrap { position: relative; }
+    canvas { width: 100%; height: 220px; display: block; touch-action: none; }
+    .tip { position: absolute; pointer-events: none; z-index: 5; min-width: 160px;
+           background: var(--surface); border: 1px solid var(--axis); border-radius: 8px;
+           padding: 8px 10px; font-size: 12.5px; box-shadow: 0 4px 14px rgba(0, 0, 0, .18); }
+    .tip .th { color: var(--ink2); margin-bottom: 4px; }
+    .tip .row { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+    .tip .row > span { color: var(--ink2); }
+    .tip .row b { color: var(--ink); font-weight: 650; }
+    .tip .k { display: inline-block; width: 12px; border-top: 2px solid; margin-right: 6px; vertical-align: middle; }
+
+    /* instances */
+    .inst { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; }
+    .tile { background: var(--page); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .tile .name { font-weight: 650; display: flex; align-items: center; gap: 8px; word-break: break-all; }
+    .tile .state { color: var(--ink2); font-size: 12.5px; margin-top: 2px; }
+    .tile dl { display: grid; grid-template-columns: 1fr auto; gap: 2px 14px; margin: 8px 0 0; font-size: 13px; }
+    .tile dt { color: var(--ink2); }
+    .tile dd { margin: 0; text-align: right; font-weight: 600; }
+
+    details.panel { margin-top: 12px; }
+    summary { cursor: pointer; font-weight: 650; font-size: 14px; }
+    .tablewrap { overflow-x: auto; margin-top: 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+    th, td { text-align: right; padding: 5px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--ink2); font-weight: 600; }
+
+    .section { margin-top: 12px; }
+    .foot { color: var(--ink2); font-size: 12.5px; margin-top: 14px; }
+
+    @media (max-width: 1250px) {
+      .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      .wrap { padding: 14px; }
+      .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .kpi.hero .value { font-size: 44px; }
+      .charts { grid-template-columns: 1fr; }
+    }
+  </style>
+  {% endraw %}
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Break It On Purpose</h1>
+      <div class="tag">Live health of the cloud service &middot; high-resolution monitoring and self-healing demo</div>
+    </div>
+    <div class="pills">
+      <span class="pill"><i class="dot" id="connDot"></i><span id="connText">Connecting&hellip;</span></span>
+      <span class="pill">Last answered by <b id="served">{{ instance }}</b></span>
+      <span class="pill">Instances online <b id="instCount">&ndash;</b></span>
+      <button class="pill" id="theme" type="button" aria-label="Switch between light and dark theme">Theme</button>
+    </div>
+  </header>
+
+  <section class="banner" id="banner" data-state="connecting" role="status" aria-live="polite">
+    <div class="banner-icon" id="bIcon"></div>
+    <div class="banner-text">
+      <div class="banner-title" id="bTitle">Connecting&hellip;</div>
+      <div class="banner-sub" id="bSub">Waiting for the first reading from the service.</div>
+    </div>
+    <div class="limits">
+      <span>Limits that count as &ldquo;degraded&rdquo;:</span>
+      <label>response time p95 &ge; <input id="slaMs" type="number" min="10" step="10" value="200"> ms</label>
+      <label>failed requests &ge; <input id="slaErr" type="number" min="0.1" step="0.1" value="1"> %</label>
+    </div>
+  </section>
+
+  <section class="panel" id="scenarios">
+    <h2>Try it: generate traffic</h2>
+    <p class="sub">Traffic is sent from this browser tab to the same address you opened (on AWS that is the load balancer, so you can watch it spread across instances). Pick a scenario and watch the banner, the tiles and the charts react.</p>
+    <div class="scn">
+      <button class="card" type="button" data-s="normal" aria-pressed="false">
+        <span class="t">Normal traffic</span><span class="d">Steady, light load. The healthy baseline.</span></button>
+      <button class="card" type="button" data-s="cpu" aria-pressed="false">
+        <span class="t">CPU spike</span><span class="d">Ramps up CPU-heavy requests until the app saturates.</span></button>
+      <button class="card" type="button" data-s="db" aria-pressed="false">
+        <span class="t">Slow database</span><span class="d">Every request waits on a slow query and holds a DB connection.</span></button>
+      <button class="card" type="button" data-s="errors" aria-pressed="false">
+        <span class="t">Error burst</span><span class="d">3 in 10 requests fail with an HTTP 500 error.</span></button>
+    </div>
+    <div class="runbar">
+      <label>Duration
+        <select id="dur"><option value="30">30 s</option><option value="60" selected>60 s</option><option value="120">2 min</option></select>
+      </label>
+      <button class="btn" id="stop" type="button" disabled>Stop</button>
+      <button class="btn" id="reset" type="button" title="Forget recent response times so the next readings reflect only new traffic">Reset readings</button>
+      <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+      <span id="runText">No scenario running.</span>
+    </div>
+  </section>
+
+  <section class="kpis" aria-label="Key numbers">
+    <div class="kpi hero" id="kP95">
+      <div class="label">Response time (p95)</div>
+      <div class="value"><span id="vP95">&ndash;</span><span class="unit">ms</span></div>
+      <div class="hint" id="hP95">95% of requests finish faster than this.</div>
+    </div>
+    <div class="kpi" id="kReq">
+      <div class="label">Traffic</div>
+      <div class="value"><span id="vReq">&ndash;</span><span class="unit">req/s</span></div>
+      <div class="hint">Requests handled per second.</div>
+    </div>
+    <div class="kpi" id="kErr">
+      <div class="label">Failed requests</div>
+      <div class="value"><span id="vErr">&ndash;</span><span class="unit">%</span></div>
+      <div class="hint" id="hErr">Share of requests returning errors.</div>
+    </div>
+    <div class="kpi" id="kCpu">
+      <div class="label">App CPU</div>
+      <div class="value"><span id="vCpu">&ndash;</span><span class="unit">%</span></div>
+      <div class="hint">100% = one CPU core fully busy.</div>
+    </div>
+    <div class="kpi" id="kPool">
+      <div class="label">DB connections used</div>
+      <div class="value"><span id="vPool">&ndash;</span><span class="unit">%</span></div>
+      <div class="hint">Share of the connection pool in use.</div>
+    </div>
+    <div class="kpi" id="kInfl">
+      <div class="label">In flight</div>
+      <div class="value"><span id="vInfl">&ndash;</span></div>
+      <div class="hint">Requests being processed right now.</div>
+    </div>
+  </section>
+
+  <section class="charts">
+    <div class="panel">
+      <h2>Response time (ms)</h2>
+      <p class="sub">How long requests take, slowest instance. Lower is better; the red line is your limit.</p>
+      <div class="legend" id="lg1"></div>
+      <div class="canvas-wrap"><canvas id="c1" role="img" aria-label="Line chart of response time percentiles over the last two minutes. The same values are in the table below."></canvas><div class="tip" hidden></div></div>
+    </div>
+    <div class="panel">
+      <h2>Traffic (requests per second)</h2>
+      <p class="sub">How much work the service is doing, and how much of it fails, summed across instances.</p>
+      <div class="legend" id="lg2"></div>
+      <div class="canvas-wrap"><canvas id="c2" role="img" aria-label="Line chart of requests and failed requests per second over the last two minutes. The same values are in the table below."></canvas><div class="tip" hidden></div></div>
+    </div>
+    <div class="panel">
+      <h2>Load on the service (%)</h2>
+      <p class="sub">How hard the app and its database connections are working, busiest instance.</p>
+      <div class="legend" id="lg3"></div>
+      <div class="canvas-wrap"><canvas id="c3" role="img" aria-label="Line chart of app CPU and database connection use over the last two minutes. The same values are in the table below."></canvas><div class="tip" hidden></div></div>
+    </div>
+  </section>
+
+  <section class="panel section">
+    <h2>Instances</h2>
+    <p class="sub">Each server answering requests. If one stops responding (for example, it is terminated), it shows here within seconds.</p>
+    <div class="inst" id="instances"></div>
+  </section>
+
+  <details class="panel" id="tbl">
+    <summary>View the recent readings as a table</summary>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Time</th><th>p50 (ms)</th><th>p95 (ms)</th><th>p99 (ms)</th><th>Req/s</th><th>Failed/s</th><th>CPU %</th><th>DB pool %</th><th>In flight</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <p class="foot">Readings refresh every second. Response-time percentiles are computed over each instance&rsquo;s most recent 500 requests, so they hold their last value while the service is idle.</p>
+</div>
+
+{% raw %}
+<script>
+(function () {
+  'use strict';
+
+  const WINDOW_S = 120;   // seconds of history shown on the charts
+  const POLL_MS = 1000;   // how often /metrics is read
+  const STALE_S = 8;      // an instance silent this long is no longer "responding"
+  const DROP_S = 60;      // ...and is forgotten after this long
+  const IDLE_RPS = 0.2;   // below this request rate the service counts as idle
+  const RATE_WINDOW_S = 5; // traffic and failure rates are averaged over this many seconds
+  // Browsers allow about 6 parallel connections per host. Keep one free so the
+  // dashboard's own metrics polling is never queued behind generated traffic.
+  const MAX_CONC = 5;
+
+  const $ = (id) => document.getElementById(id);
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const num = (v, d) => (v == null || Number.isNaN(v)) ? '–' : v.toFixed(d || 0);
+
+  const SCENARIOS = {
+    normal: { name: 'Normal traffic', path: '/load?cpu_ms=15&queries=1',            from: 6,  to: 6  },
+    cpu:    { name: 'CPU spike',      path: '/load?cpu_ms=60&cpu_time=1',            from: 3,  to: 30 },
+    db:     { name: 'Slow database',  path: '/load?queries=1&query_sleep_ms=300',    from: 3,  to: 20 },
+    errors: { name: 'Error burst',    path: '/load?cpu_ms=15&fail_pct=30',           from: 10, to: 10 },
+  };
+
+  // ---------- data ----------
+  const seen = {};     // instance id -> { t, m, reqRate, errRate }
+  const history = [];  // one fleet-wide reading per poll
+  const events = [];   // { t, label } markers drawn on the charts
+  let failures = 0;
+  let lastBanner = { state: 'connecting' };
+
+  function ingest(m, t) {
+    const prev = seen[m.instance];
+    // Rates use the server's own clock so network jitter between polls cannot
+    // distort them; t (the browser clock) is only used to judge staleness.
+    const st = m.server_time || t;
+    const samples = prev ? prev.samples : [];
+    samples.push({ st, req: m.requests_total, err: m.errors_total });
+    // Keep the newest sample that is at least RATE_WINDOW_S old as the baseline.
+    while (samples.length > 2 && samples[1].st <= st - RATE_WINDOW_S) samples.shift();
+    const last = samples[samples.length - 1];
+    // Counters only ever grow; a drop means the instance restarted.
+    if (last.req < samples[0].req || last.err < samples[0].err) { samples.length = 0; samples.push(last); }
+    let reqRate = 0, errRate = 0;
+    const dt = last.st - samples[0].st;
+    if (samples.length > 1 && dt > 0) {
+      reqRate = (last.req - samples[0].req) / dt;
+      errRate = (last.err - samples[0].err) / dt;
+    }
+    seen[m.instance] = { t, st, m, reqRate, errRate, samples };
+  }
+
+  function aggregate(now) {
+    const act = Object.values(seen).filter((v) => now - v.t <= STALE_S);
+    if (!act.length) return null;
+    const max = (f) => Math.max(...act.map(f));
+    const sum = (f) => act.reduce((a, v) => a + f(v), 0);
+    const req = sum((v) => v.reqRate);
+    const err = sum((v) => v.errRate);
+    return {
+      t: now,
+      p50: max((v) => v.m.latency_ms.p50),
+      p95: max((v) => v.m.latency_ms.p95),
+      p99: max((v) => v.m.latency_ms.p99),
+      req, err,
+      errPct: req > 0.05 ? Math.min(100, (err / req) * 100) : 0,
+      inflight: sum((v) => v.m.in_flight),
+      pool: max((v) => v.m.pool.utilization * 100),
+      cpu: max((v) => (v.m.system ? v.m.system.process_cpu_percent : 0)),
+      idle: req < IDLE_RPS,
+    };
+  }
+
+  function record(now) {
+    history.push(aggregate(now) || { t: now });      // a row with no values draws as a gap
+    while (history.length && history[0].t < now - WINDOW_S - 5) history.shift();
+    for (const id of Object.keys(seen)) if (now - seen[id].t > DROP_S) delete seen[id];
+    while (events.length && events[0].t < now - WINDOW_S) events.shift();
+  }
+
+  // ---------- charts ----------
+  function niceStep(v) {
+    if (v <= 0) return 1;
+    const p = Math.pow(10, Math.floor(Math.log10(v)));
+    const f = v / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+  }
+  const tickLabel = (v) => v >= 1000 ? (v / 1000) + 'K' : (Number.isInteger(v) ? String(v) : v.toFixed(1));
+
+  function makeChart(canvasId, legendId, cfg) {
+    const canvas = $(canvasId), tip = canvas.parentElement.querySelector('.tip');
+    const ctx = canvas.getContext('2d');
+    const pad = { l: 46, r: 16, t: 16, b: 26 };
+    let W = 0, H = 0, hoverX = null, lastNow = Date.now() / 1000;
+
+    const legend = $(legendId);
+    cfg.series.forEach((s) => {
+      const item = document.createElement('span');
+      const key = document.createElement('i');
+      key.className = 'key';
+      key.style.borderTopColor = 'var(' + s.color + ')';
+      item.appendChild(key);
+      item.appendChild(document.createTextNode(s.label));
+      legend.appendChild(item);
+    });
+
+    function fit() {
+      const dpr = window.devicePixelRatio || 1;
+      W = canvas.clientWidth; H = canvas.clientHeight;
+      const cw = Math.round(W * dpr), ch = Math.round(H * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function dotAt(px, py, color, surface) {
+      ctx.fillStyle = surface; ctx.beginPath(); ctx.arc(px, py, 6, 0, 7); ctx.fill();   // 2px surface ring
+      ctx.fillStyle = color;   ctx.beginPath(); ctx.arc(px, py, 4, 0, 7); ctx.fill();
+    }
+
+    function draw(now) {
+      lastNow = now;
+      fit();
+      const C = { grid: css('--grid'), axis: css('--axis'), muted: css('--muted'), ink2: css('--ink2'),
+                  surface: css('--surface'), crit: css('--critical') };
+      const t0 = now - WINDOW_S;
+      const rows = history.filter((r) => r.t >= t0 - 2);
+      const plotW = W - pad.l - pad.r, plotH = H - pad.t - pad.b;
+
+      let dataMax = 0;
+      for (const s of cfg.series) for (const r of rows) if (r[s.key] != null && r[s.key] > dataMax) dataMax = r[s.key];
+      const thr = cfg.threshold ? cfg.threshold() : null;
+      const step = niceStep(Math.max(dataMax, thr ? thr * 1.15 : 0, cfg.minTop) / 4);
+      const yMax = step * 4;
+      const x = (t) => pad.l + ((t - t0) / WINDOW_S) * plotW;
+      const y = (v) => pad.t + plotH - (Math.min(v, yMax) / yMax) * plotH;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.font = '12px system-ui, -apple-system, "Segoe UI", sans-serif';
+
+      // grid + y labels
+      ctx.lineWidth = 1; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 4; i++) {
+        const yy = Math.round(y(step * i)) + 0.5;
+        ctx.strokeStyle = i === 0 ? C.axis : C.grid;
+        ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke();
+        ctx.fillStyle = C.muted; ctx.fillText(tickLabel(step * i), pad.l - 8, yy);
+      }
+      // x labels
+      ctx.textBaseline = 'top';
+      [['−2 min', 0, 'left'], ['−1 min', 0.5, 'center'], ['now', 1, 'right']].forEach(([txt, f, al]) => {
+        ctx.textAlign = al; ctx.fillStyle = C.muted; ctx.fillText(txt, pad.l + f * plotW, H - pad.b + 7);
+      });
+
+      // scenario markers; labels that would overlap go on a second row, and if that
+      // is taken too the label is skipped (its line is still drawn) so the text
+      // never turns into a smudge
+      ctx.textBaseline = 'top';
+      const rowEnd = [-Infinity, -Infinity];
+      for (const e of events) {
+        if (e.t < t0 || e.t > now) continue;
+        const xx = Math.round(x(e.t)) + 0.5;
+        ctx.globalAlpha = 0.55; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + plotH); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.fillStyle = C.ink2;
+        const w = ctx.measureText(e.label).width;
+        const right = xx + 5 + w > W - pad.r;
+        const x0 = right ? xx - 5 - w : xx + 5;
+        const row = rowEnd.findIndex((end) => x0 >= end + 8);
+        if (row < 0) continue;
+        ctx.textAlign = 'left';
+        ctx.fillText(e.label, x0, pad.t + 2 + row * 15);
+        rowEnd[row] = x0 + w;
+      }
+
+      // limit line
+      if (thr) {
+        const yy = Math.round(y(thr)) + 0.5;
+        ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = C.crit; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke(); ctx.restore();
+        ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; ctx.fillStyle = C.ink2;
+        ctx.fillText('limit ' + thr + ' ' + cfg.unit, W - pad.r - 4, yy - 3);
+      }
+
+      // series
+      ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      for (const s of cfg.series) {
+        const color = css(s.color);
+        ctx.strokeStyle = color; ctx.beginPath();
+        let prevT = null, last = null;
+        for (const r of rows) {
+          const v = r[s.key];
+          if (v == null) { prevT = null; continue; }
+          const px = x(r.t), py = y(v);
+          if (prevT === null || r.t - prevT > 4) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          prevT = r.t; last = { px, py };
+        }
+        ctx.stroke();
+        if (last && now - prevT < 4) dotAt(last.px, last.py, color, C.surface);
+      }
+
+      // hover: crosshair snaps to the nearest reading
+      tip.hidden = true;
+      if (hoverX !== null) {
+        const tHover = t0 + ((hoverX - pad.l) / plotW) * WINDOW_S;
+        let best = null;
+        for (const r of rows) {
+          if (!cfg.series.some((s) => r[s.key] != null)) continue;
+          if (best === null || Math.abs(r.t - tHover) < Math.abs(best.t - tHover)) best = r;
+        }
+        if (best) {
+          const xx = Math.round(x(best.t)) + 0.5;
+          ctx.globalAlpha = 0.6; ctx.strokeStyle = C.ink2; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(xx, pad.t); ctx.lineTo(xx, pad.t + plotH); ctx.stroke(); ctx.globalAlpha = 1;
+          cfg.series.forEach((s) => { if (best[s.key] != null) dotAt(x(best.t), y(best[s.key]), css(s.color), C.surface); });
+          showTip(best, xx);
+        }
+      }
+    }
+
+    function showTip(row, xx) {
+      tip.textContent = '';
+      const th = document.createElement('div');
+      th.className = 'th';
+      const ago = Math.round(lastNow - row.t);
+      th.textContent = ago <= 1 ? 'Now' : ago + ' s ago';
+      tip.appendChild(th);
+      cfg.series.forEach((s) => {
+        if (row[s.key] == null) return;
+        const line = document.createElement('div'); line.className = 'row';
+        const name = document.createElement('span');
+        const k = document.createElement('i'); k.className = 'k'; k.style.borderTopColor = 'var(' + s.color + ')';
+        name.appendChild(k); name.appendChild(document.createTextNode(s.label));
+        const val = document.createElement('b'); val.textContent = num(row[s.key], cfg.digits) + ' ' + cfg.unit;
+        line.appendChild(name); line.appendChild(val); tip.appendChild(line);
+      });
+      tip.hidden = false;
+      const flip = xx > W / 2;
+      tip.style.left = flip ? 'auto' : (xx + 12) + 'px';
+      tip.style.right = flip ? (W - xx + 12) + 'px' : 'auto';
+      tip.style.top = pad.t + 'px';
+    }
+
+    canvas.addEventListener('pointermove', (e) => { hoverX = e.clientX - canvas.getBoundingClientRect().left; draw(lastNow); });
+    canvas.addEventListener('pointerleave', () => { hoverX = null; draw(lastNow); });
+    return { draw };
+  }
+
+  const charts = [
+    makeChart('c1', 'lg1', {
+      unit: 'ms', digits: 0, minTop: 40,
+      threshold: () => slaMs(),
+      series: [
+        { key: 'p50', color: '--s1', label: 'Typical (p50)' },
+        { key: 'p95', color: '--s2', label: '95th percentile (p95)' },
+        { key: 'p99', color: '--s3', label: 'Slowest 1% (p99)' },
+      ],
+    }),
+    makeChart('c2', 'lg2', {
+      unit: '/s', digits: 1, minTop: 4,
+      series: [
+        { key: 'req', color: '--s1', label: 'Requests per second' },
+        { key: 'err', color: '--s2', label: 'Failed per second' },
+      ],
+    }),
+    makeChart('c3', 'lg3', {
+      unit: '%', digits: 0, minTop: 100,
+      series: [
+        { key: 'cpu',  color: '--s1', label: 'App CPU (100% = one core)' },
+        { key: 'pool', color: '--s2', label: 'DB connections in use' },
+      ],
+    }),
+  ];
+
+  // ---------- banner, tiles, instances, table ----------
+  const slaMs = () => Math.max(10, parseFloat($('slaMs').value) || 200);
+  const slaErr = () => Math.max(0.1, parseFloat($('slaErr').value) || 1);
+
+  const ICONS = {
+    healthy:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/></svg>',
+    warning:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.1"/></svg>',
+    degraded:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
+    idle:       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></svg>',
+    connecting: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  };
+  ICONS.down = ICONS.degraded;
+
+  function decideBanner(a) {
+    if (failures >= 3) return { state: 'down', title: 'Service unreachable', sub: 'The dashboard cannot reach the app. Check that it is running.' };
+    if (failures > 0) return lastBanner;                       // a single missed poll is not news
+    if (!a || a.p95 == null) return { state: 'connecting', title: 'Connecting…', sub: 'Waiting for the first reading from the service.' };
+    if (a.idle) return { state: 'idle', title: 'Idle — waiting for traffic', sub: 'Pick a scenario above to generate some traffic.' };
+    const sla = slaMs(), lim = slaErr(), bad = [];
+    if (a.p95 >= sla) bad.push('Response time (p95) is ' + num(a.p95) + ' ms, over the ' + sla + ' ms limit');
+    if (a.errPct >= lim) bad.push(num(a.errPct, 1) + '% of requests are failing, over the ' + lim + '% limit');
+    if (bad.length) return { state: 'degraded', title: 'Degraded — users are affected', sub: bad.join(' · ') };
+    if (a.p95 >= sla * 0.6 || a.errPct > 0) {
+      return { state: 'warning', title: 'Slowing down — approaching the limit',
+               sub: 'p95 is ' + num(a.p95) + ' ms (limit ' + sla + ' ms)' + (a.errPct > 0 ? ' · ' + num(a.errPct, 1) + '% of requests failing' : '') + '.' };
+    }
+    return { state: 'healthy', title: 'Healthy', sub: 'p95 ' + num(a.p95) + ' ms · ' + num(a.req, 1) + ' requests/s · no failures.' };
+  }
+
+  function renderBanner(a) {
+    const b = decideBanner(a);
+    lastBanner = b;
+    $('banner').dataset.state = b.state;
+    $('bIcon').innerHTML = ICONS[b.state] || ICONS.connecting;   // static, trusted markup
+    $('bTitle').textContent = b.title;
+    $('bSub').textContent = b.sub;
+    $('connDot').className = 'dot' + (b.state === 'down' ? ' bad' : b.state === 'connecting' ? '' : ' ok');
+    $('connText').textContent = b.state === 'down' ? 'Offline' : b.state === 'connecting' ? 'Connecting…' : 'Live';
+  }
+
+  function renderKpis(a) {
+    const has = a && a.p95 != null;
+    const set = (id, v) => { $(id).textContent = v; };
+    set('vP95', has ? num(a.p95, a.p95 < 100 ? 1 : 0) : '–');
+    set('vReq', has ? num(a.req, 1) : '–');
+    set('vErr', has ? num(a.errPct, 1) : '–');
+    set('vCpu', has ? num(a.cpu) : '–');
+    set('vPool', has ? num(a.pool) : '–');
+    set('vInfl', has ? num(a.inflight) : '–');
+    set('hP95', has ? 'Typical ' + num(a.p50) + ' ms · slowest 1% ' + num(a.p99) + ' ms' + (a.idle ? ' (last 500 requests)' : '') : '95% of requests finish faster than this.');
+    const dim = has && a.idle;
+    ['kP95', 'kErr', 'kPool', 'kInfl'].forEach((id) => $(id).classList.toggle('dim', !!dim));
+  }
+
+  function renderInstances(now) {
+    const box = $('instances');
+    const ids = Object.keys(seen).sort();
+    $('instCount').textContent = String(ids.filter((id) => now - seen[id].t <= STALE_S).length);
+    box.textContent = '';
+    if (!ids.length) {
+      const p = document.createElement('div'); p.className = 'sub'; p.textContent = 'Waiting for the first response…';
+      box.appendChild(p); return;
+    }
+    ids.forEach((id) => {
+      const v = seen[id], live = now - v.t <= STALE_S, m = v.m;
+      const tile = document.createElement('div'); tile.className = 'tile';
+      const name = document.createElement('div'); name.className = 'name';
+      const dot = document.createElement('i'); dot.className = 'dot ' + (live ? 'ok' : 'bad');
+      name.appendChild(dot); name.appendChild(document.createTextNode(id));
+      const state = document.createElement('div'); state.className = 'state';
+      state.textContent = live ? 'Responding' : 'No response for ' + Math.round(now - v.t) + ' s';
+      const dl = document.createElement('dl');
+      const rows = [
+        ['Response time p95', num(m.latency_ms.p95) + ' ms'],
+        ['Traffic', num(v.reqRate, 1) + ' req/s'],
+        ['In flight', String(m.in_flight)],
+        ['DB connections used', num(m.pool.utilization * 100) + '%'],
+        ['App CPU', m.system ? num(m.system.process_cpu_percent) + '%' : '–'],
+        ['Memory', m.system ? num(m.system.mem_percent) + '%' : '–'],
+      ];
+      rows.forEach(([k, val]) => {
+        const dt = document.createElement('dt'); dt.textContent = k;
+        const dd = document.createElement('dd'); dd.textContent = val;
+        dl.appendChild(dt); dl.appendChild(dd);
+      });
+      tile.appendChild(name); tile.appendChild(state); tile.appendChild(dl);
+      box.appendChild(tile);
+    });
+  }
+
+  function renderTable() {
+    if (!$('tbl').open) return;
+    const body = $('tbody');
+    body.textContent = '';
+    history.filter((r) => r.p95 != null).slice(-12).reverse().forEach((r) => {
+      const tr = document.createElement('tr');
+      [new Date(r.t * 1000).toLocaleTimeString(), num(r.p50), num(r.p95), num(r.p99), num(r.req, 1),
+       num(r.err, 1), num(r.cpu), num(r.pool), num(r.inflight)].forEach((c) => {
+        const td = document.createElement('td'); td.textContent = c; tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function render() {
+    const now = Date.now() / 1000;
+    const a = history.length ? history[history.length - 1] : null;
+    renderBanner(a);
+    renderKpis(a);
+    renderInstances(now);
+    charts.forEach((c) => c.draw(now));
+    renderTable();
+  }
+
+  // ---------- polling ----------
+  async function poll() {
+    try {
+      const res = await fetch('/metrics', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const m = await res.json();
+      failures = 0;
+      ingest(m, Date.now() / 1000);
+      $('served').textContent = m.instance;
+    } catch (err) {
+      failures += 1;
+    }
+    record(Date.now() / 1000);
+    render();
+    setTimeout(poll, POLL_MS);
+  }
+
+  // ---------- scenarios ----------
+  let run = null;
+
+  function setRunUi() {
+    document.querySelectorAll('.scn .card').forEach((b) => b.setAttribute('aria-pressed', String(!!run && run.id === b.dataset.s)));
+    $('stop').disabled = !run;
+    if (!run) { $('prog').style.width = '0'; return; }
+  }
+
+  // reason: 'manual' (Stop button), 'done' (ran its full time) or 'replaced'
+  // (another scenario is taking over, which marks the chart itself).
+  function stopScenario(reason) {
+    if (!run) return;
+    const manual = reason !== 'done';
+    clearInterval(run.timer);
+    run.ctrl.abort();
+    if (reason !== 'replaced') events.push({ t: Date.now() / 1000, label: manual ? 'Stopped' : 'Finished' });
+    $('runText').textContent = (manual ? 'Stopped' : 'Finished') + ' “' + SCENARIOS[run.id].name + '” · sent ' + run.sent + ', failed ' + run.failed + '.';
+    run = null;
+    setRunUi();
+    render();
+  }
+
+  // Clear the servers' recent-latency window so a new scenario is not judged on the
+  // previous one. Behind a load balancer each request reaches one instance, so keep
+  // going until every instance we can see has acknowledged.
+  async function resetReadings(mark) {
+    const now = Date.now() / 1000;
+    const want = Object.keys(seen).filter((id) => now - seen[id].t <= STALE_S);
+    const done = new Set();
+    for (let i = 0; i < 12 && !(done.size && want.every((id) => done.has(id))); i++) {
+      try {
+        const res = await fetch('/metrics/reset-window', { method: 'POST', cache: 'no-store' });
+        done.add((await res.json()).instance);
+      } catch (err) { break; }
+    }
+    if (mark) events.push({ t: Date.now() / 1000, label: 'Readings reset' });
+  }
+
+  async function startScenario(id) {
+    if (run) stopScenario('replaced');
+    await resetReadings(false);
+    if (run) return;                                   // another click won the race
+    const s = SCENARIOS[id], dur = parseFloat($('dur').value) || 60, now = Date.now() / 1000;
+    run = { id, start: now, end: now + dur, dur, ctrl: new AbortController(), pending: 0, tokens: 0, sent: 0, failed: 0, last: now, timer: null };
+    events.push({ t: now, label: s.name });
+    setRunUi();
+
+    const targetQps = (t) => s.from + (s.to - s.from) * Math.min(1, (t - run.start) / run.dur);
+
+    // Refill from elapsed time and send while there is room. Called from the timer
+    // AND from every completed request, so the load keeps pace even when the
+    // browser throttles timers (for example while another tab or window is in front).
+    const pump = (r) => {
+      if (run !== r) return;
+      const t = Date.now() / 1000;
+      r.tokens = Math.min(MAX_CONC, r.tokens + targetQps(t) * (t - r.last));
+      r.last = t;
+      while (r.tokens >= 1 && r.pending < MAX_CONC) { r.tokens -= 1; fire(r); }
+    };
+
+    const fire = (r) => {
+      r.pending += 1;
+      fetch(s.path, { cache: 'no-store', signal: r.ctrl.signal })
+        .then((res) => { r.sent += 1; if (!res.ok) r.failed += 1; return res.text(); })
+        .catch(() => {})
+        .finally(() => { r.pending -= 1; pump(r); });
+    };
+
+    run.timer = setInterval(() => {
+      const t = Date.now() / 1000;
+      if (t >= run.end) { stopScenario('done'); return; }
+      pump(run);
+      $('prog').style.width = (((t - run.start) / run.dur) * 100).toFixed(1) + '%';
+      $('runText').textContent = 'Running “' + s.name + '” · ' + Math.ceil(run.end - t) + ' s left · up to ' + Math.round(targetQps(t)) + ' req/s requested · sent ' + run.sent + ', failed ' + run.failed;
+    }, 100);
+  }
+
+  document.querySelectorAll('.scn .card').forEach((b) => b.addEventListener('click', () => startScenario(b.dataset.s)));
+  $('stop').addEventListener('click', () => stopScenario('manual'));
+  $('reset').addEventListener('click', () => { resetReadings(true).then(render); });
+
+  // ---------- theme + misc ----------
+  const effectiveTheme = () => document.documentElement.getAttribute('data-theme') ||
+    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  $('theme').addEventListener('click', () => {
+    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('biop-theme', next); } catch (e) {}
+    render();
+  });
+  $('slaMs').addEventListener('input', render);
+  $('slaErr').addEventListener('input', render);
+  $('tbl').addEventListener('toggle', renderTable);
+  let raf = null;
+  window.addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(render); });
+
+  setRunUi();
+  poll();
+})();
+</script>
+{% endraw %}
 </body>
 </html>
